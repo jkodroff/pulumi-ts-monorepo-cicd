@@ -1,0 +1,6 @@
+name: monorepo-cluster
+description: Layer 2 - a synthetic cluster placed in the network exported by monorepo-networking.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm

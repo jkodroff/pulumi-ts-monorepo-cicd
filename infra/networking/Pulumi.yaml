@@ -1,0 +1,6 @@
+name: monorepo-networking
+description: Layer 1 - the synthetic network the cluster is built into. No upstream dependencies.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm

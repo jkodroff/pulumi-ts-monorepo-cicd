@@ -1,0 +1,19 @@
+{
+  "name": "infra",
+  "private": true,
+  "description": "Pulumi monorepo: networking -> cluster -> workload, two stacks each, one lockfile.",
+  "workspaces": [
+    "networking",
+    "cluster",
+    "workload"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "//devDependencies": "typescript is pinned below 7 on purpose: @pulumi/pulumi declares it as an optional peer with range '>= 3.8.3 < 7'. Installing 7.x makes Pulumi fall back to its vendored TypeScript 3.8.3 at 'pulumi up' time, which fails on modern syntax while 'tsc' still passes. Keep these three at the workspace root only, so npm hoists exactly one copy of each.",
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3"
+  }
+}

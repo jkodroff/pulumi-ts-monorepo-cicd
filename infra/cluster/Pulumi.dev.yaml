@@ -1,0 +1,8 @@
+config:
+  monorepo-cluster:k8sVersion: "1.31"
+  monorepo-cluster:nodeCount: "2"
+  monorepo-cluster:nodeSize: small
+  # monorepo-cluster:networkingStack is intentionally unset: the program falls back to
+  # <org>/monorepo-networking/<this stack name>. Set it only when this stack needs to
+  # point at an upstream stack with a different name (e.g. an ephemeral PR stack
+  # reading the shared dev network).

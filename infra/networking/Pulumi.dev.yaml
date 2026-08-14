@@ -1,0 +1,7 @@
+config:
+  # Config keys are namespaced by the Pulumi *project* name (monorepo-networking),
+  # not the directory name (networking). See infra/README.md.
+  monorepo-networking:cidrBlock: 10.0.0.0/16
+  monorepo-networking:azCount: "2"
+  monorepo-networking:subnetNewBits: "8"
+  monorepo-networking:region: us-east-1
