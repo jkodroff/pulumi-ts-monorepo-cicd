@@ -1,12 +1,12 @@
 import * as pulumi from "@pulumi/pulumi";
 
-import { Vpc } from "./vpc";
+import { FakeVpc } from "./vpc";
 
 // `new pulumi.Config()` with no argument namespaces to the project name, so these
 // resolve against the `monorepo-networking:` keys in Pulumi.<stack>.yaml.
 const cfg = new pulumi.Config();
 
-const vpc = new Vpc("main", {
+const vpc = new FakeVpc("main", {
     cidrBlock: cfg.require("cidrBlock"),
     azCount: cfg.requireNumber("azCount"),
     subnetNewBits: cfg.requireNumber("subnetNewBits"),

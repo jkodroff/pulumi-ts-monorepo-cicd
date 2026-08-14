@@ -1,7 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
-export interface AppArgs {
+export interface FakeAppArgs {
     /** Secret, read from monorepo-cluster over a StackReference. */
     kubeconfig: pulumi.Input<string>;
     clusterName: pulumi.Input<string>;
@@ -10,8 +10,8 @@ export interface AppArgs {
     dbPasswordLength: number;
 }
 
-/** A stand-in for an application release: a name, an endpoint, and a generated DB credential. */
-export class App extends pulumi.ComponentResource {
+/** A fake application release: a name, an endpoint, and a generated DB credential. */
+export class FakeApp extends pulumi.ComponentResource {
     public readonly releaseName: pulumi.Output<string>;
     public readonly endpoint: pulumi.Output<string>;
     public readonly dbPassword: pulumi.Output<string>;
@@ -19,8 +19,8 @@ export class App extends pulumi.ComponentResource {
     /** Parsed out of the kubeconfig — proof the upstream secret arrived intact. Still secret. */
     public readonly kubeconfigContext: pulumi.Output<string>;
 
-    constructor(name: string, args: AppArgs, opts?: pulumi.ComponentResourceOptions) {
-        super("monorepo:workload:App", name, {}, opts);
+    constructor(name: string, args: FakeAppArgs, opts?: pulumi.ComponentResourceOptions) {
+        super("monorepo:workload:FakeApp", name, {}, opts);
 
         const pet = new random.RandomPet(name, {
             length: 2,

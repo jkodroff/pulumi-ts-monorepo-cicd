@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 
-import { Cluster } from "./cluster";
+import { FakeCluster } from "./cluster";
 
 const cfg = new pulumi.Config();
 
@@ -22,7 +22,7 @@ const vpcId = networking.requireOutput("vpcId") as pulumi.Output<string>;
 const privateSubnetIds = networking.requireOutput("privateSubnetIds") as pulumi.Output<string[]>;
 const availabilityZones = networking.requireOutput("availabilityZones") as pulumi.Output<string[]>;
 
-const cluster = new Cluster("main", {
+const cluster = new FakeCluster("main", {
     vpcId,
     subnetIds: privateSubnetIds,
     availabilityZones,

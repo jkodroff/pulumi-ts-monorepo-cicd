@@ -2,21 +2,21 @@ import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import * as tls from "@pulumi/tls";
 
-export interface NodeGroupArgs {
+export interface FakeNodeGroupArgs {
     clusterName: pulumi.Input<string>;
     subnetIds: pulumi.Input<string[]>;
     nodeCount: number;
     nodeSize: string;
 }
 
-/** A stand-in for a managed node pool sitting in the private subnets of layer 1. */
-export class NodeGroup extends pulumi.ComponentResource {
+/** A fake managed node pool sitting in the private subnets of layer 1. */
+export class FakeNodeGroup extends pulumi.ComponentResource {
     public readonly nodeGroupName: pulumi.Output<string>;
     public readonly nodeCount: number;
     public readonly nodeSize: string;
 
-    constructor(name: string, args: NodeGroupArgs, opts?: pulumi.ComponentResourceOptions) {
-        super("monorepo:cluster:NodeGroup", name, {}, opts);
+    constructor(name: string, args: FakeNodeGroupArgs, opts?: pulumi.ComponentResourceOptions) {
+        super("monorepo:cluster:FakeNodeGroup", name, {}, opts);
 
         const id = new random.RandomId(name, {
             byteLength: 6,
@@ -31,7 +31,7 @@ export class NodeGroup extends pulumi.ComponentResource {
     }
 }
 
-export interface ClusterArgs {
+export interface FakeClusterArgs {
     vpcId: pulumi.Input<string>;
     subnetIds: pulumi.Input<string[]>;
     availabilityZones: pulumi.Input<string[]>;
@@ -41,19 +41,19 @@ export interface ClusterArgs {
 }
 
 /**
- * A stand-in for a managed Kubernetes cluster. The interesting part is the kubeconfig:
+ * A fake managed Kubernetes cluster. The interesting part is the kubeconfig:
  * it is assembled from a real self-signed CA (via @pulumi/tls) so that this program has
  * a genuine *secret* output to hand downstream, without any cloud provider involved.
  */
-export class Cluster extends pulumi.ComponentResource {
+export class FakeCluster extends pulumi.ComponentResource {
     public readonly clusterName: pulumi.Output<string>;
     public readonly endpoint: pulumi.Output<string>;
     public readonly kubeconfig: pulumi.Output<string>;
     public readonly caCertPem: pulumi.Output<string>;
-    public readonly nodeGroup: NodeGroup;
+    public readonly nodeGroup: FakeNodeGroup;
 
-    constructor(name: string, args: ClusterArgs, opts?: pulumi.ComponentResourceOptions) {
-        super("monorepo:cluster:Cluster", name, {}, opts);
+    constructor(name: string, args: FakeClusterArgs, opts?: pulumi.ComponentResourceOptions) {
+        super("monorepo:cluster:FakeCluster", name, {}, opts);
 
         const pet = new random.RandomPet(name, {
             length: 2,
@@ -86,7 +86,7 @@ export class Cluster extends pulumi.ComponentResource {
         // a plaintext/secret contrast in `pulumi stack output`.
         this.caCertPem = ca.certPem;
 
-        this.nodeGroup = new NodeGroup(`${name}-nodes`, {
+        this.nodeGroup = new FakeNodeGroup(`${name}-nodes`, {
             clusterName: this.clusterName,
             subnetIds: args.subnetIds,
             nodeCount: args.nodeCount,

@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 
-import { App } from "./app";
+import { FakeApp } from "./app";
 
 const cfg = new pulumi.Config();
 const org = pulumi.getOrganization();
@@ -24,7 +24,7 @@ const vpcId = cluster.requireOutput("networkVpcId") as pulumi.Output<string>;
 // may not have yet.
 const monitoringEndpoint = cluster.getOutput("monitoringEndpoint");
 
-const app = new App("guestbook", {
+const app = new FakeApp("guestbook", {
     kubeconfig,
     clusterName,
     appName: cfg.require("appName"),
