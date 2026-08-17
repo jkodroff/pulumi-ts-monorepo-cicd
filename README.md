@@ -100,10 +100,11 @@ A merge never touches `prod`. Promotion is moving the tag:
 git tag -f prod <sha> && git push -f origin prod
 ```
 
-`pulumi-cloud/` declares all of it with `@pulumi/pulumiservice` — seven
-`DeploymentSettings` (six stacks plus its own) and two `Webhook`s. Org comes from
-`getOrganization()` and `owner/repo` from `git remote origin`, so a fork needs no edits;
-`Pulumi.main.yaml` lists the overrides. Bootstrap it once, in the org holding the stacks:
+`pulumi-cloud/` declares all of it with `@pulumi/pulumiservice` — six
+`DeploymentSettings` and two `Webhook`s. Org comes from `getOrganization()` and
+`owner/repo` is read off `git remote origin`, so you can clone this repo under any name
+into any org and nothing needs editing; `Pulumi.main.yaml` lists the overrides. Bootstrap
+it once, in the org holding the stacks:
 
 ```bash
 (cd pulumi-cloud && npm install && pulumi stack init <org>/main && pulumi up)

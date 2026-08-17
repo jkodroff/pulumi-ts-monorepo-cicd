@@ -6,5 +6,4 @@
 #   monorepo-pulumi-cloud:repository: owner/repo   # default: parsed from git remote origin
 #   monorepo-pulumi-cloud:branch: main             # branch the stacks deploy from
 #   monorepo-pulumi-cloud:infraDir: infra          # where the layered programs live
-#   monorepo-pulumi-cloud:selfDir: pulumi-cloud    # where this program lives
 #   monorepo-pulumi-cloud:projectPrefix: monorepo  # monorepo-networking, monorepo-cluster, ...
