@@ -33,18 +33,19 @@ none that require cloud spend or credentials.
 ## Quick start
 
 ```bash
-cd infra/networking && pulumi install    # detects the workspace root, installs once for all three
+cd infra
+pulumi install -C networking    # detects the workspace root, installs once for all three
+
+export PULUMI_ORG=<your-org>
+for env in dev prod; do
+  for layer in networking cluster workload; do
+    (cd $layer && pulumi stack init "$PULUMI_ORG/$env" && pulumi up -s "$env" --yes)
+  done
+done
 ```
 
-Then deploy bottom-up:
-
-```bash
-(cd networking && pulumi up -s dev --yes)
-(cd cluster    && pulumi up -s dev --yes)
-(cd workload   && pulumi up -s dev --yes)
-```
-
-Same for `prod`. Tear down in reverse.
+`pulumi up` will not create a missing stack, hence the `stack init`. Tear down in reverse
+— `workload`, `cluster`, `networking`.
 
 The order is mandatory, not advisory: a `StackReference` is read during **preview**, so a
 downstream stack cannot even be previewed until its upstream has been deployed.
@@ -101,18 +102,36 @@ git tag -f prod <sha> && git push -f origin prod
 ```
 
 `pulumi-cloud/` declares all of it with `@pulumi/pulumiservice` — six
-`DeploymentSettings` and two `Webhook`s. Org comes from `getOrganization()` and
-`owner/repo` is read off `git remote origin`, so you can clone this repo under any name
-into any org and nothing needs editing; `Pulumi.main.yaml` lists the overrides. Bootstrap
-it once, in the org holding the stacks:
+`DeploymentSettings` and two `Webhook`s. `Pulumi.main.yaml` lists the config overrides;
+you shouldn't need any.
 
-```bash
-(cd pulumi-cloud && npm install && pulumi stack init <org>/main && pulumi up)
-```
+### Running it on your own fork
 
-Also needs: the Pulumi GitHub App on the repo, all six stacks deployed once bottom-up, a
-`PULUMI_ACCESS_TOKEN` secret, and a `PULUMI_ORG` variable if that token's default org
-isn't the stacks'.
+Order matters: `DeploymentSettings` 404s against a stack that doesn't exist, so the six
+stacks come first.
+
+1. Fork this repo, or use it as a template, and clone it. Nothing needs editing — the org
+   comes from `getOrganization()`, and `owner/repo` is read off `git remote origin`.
+2. Give the [Pulumi GitHub App](https://www.pulumi.com/docs/integrations/version-control/github-app/)
+   access to the new repo. Deployments can only see repos you grant it.
+3. Run the Quick start above. All six stacks have to exist *and* be deployed.
+4. Bootstrap the pipeline, in the org holding those stacks:
+
+   ```bash
+   cd pulumi-cloud    # from the repo root; the Quick start leaves you in infra/
+   npm install
+   pulumi stack init "$PULUMI_ORG/main"
+   pulumi up
+   ```
+
+5. Give the tag workflow its credentials:
+
+   ```bash
+   gh secret set PULUMI_ACCESS_TOKEN                # paste a Pulumi access token
+   gh variable set PULUMI_ORG --body "$PULUMI_ORG"
+   ```
+
+6. Cut the first release: `git tag prod main && git push origin prod`.
 
 Three things that aren't obvious:
 
