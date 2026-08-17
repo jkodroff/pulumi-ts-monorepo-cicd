@@ -1,0 +1,4 @@
+config:
+  monorepo-workload:appName: guestbook
+  monorepo-workload:replicas: "3"
+  monorepo-workload:dbPasswordLength: "32"

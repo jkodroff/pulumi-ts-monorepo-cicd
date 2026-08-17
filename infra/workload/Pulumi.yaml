@@ -1,0 +1,6 @@
+name: monorepo-workload
+description: Layer 3 - an application deployed onto the cluster exported by monorepo-cluster.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm

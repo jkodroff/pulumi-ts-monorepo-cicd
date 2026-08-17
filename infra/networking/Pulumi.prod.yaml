@@ -1,0 +1,5 @@
+config:
+  monorepo-networking:cidrBlock: 10.100.0.0/16
+  monorepo-networking:azCount: "3"
+  monorepo-networking:subnetNewBits: "8"
+  monorepo-networking:region: us-east-1

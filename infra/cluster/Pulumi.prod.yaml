@@ -1,0 +1,4 @@
+config:
+  monorepo-cluster:k8sVersion: "1.31"
+  monorepo-cluster:nodeCount: "5"
+  monorepo-cluster:nodeSize: large
