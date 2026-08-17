@@ -1,0 +1,9 @@
+# Deliberately empty. Every key below has a working default: the org comes from the
+# access token, and the repository is read from `git remote origin`. A fork only needs
+# to override if the layout changed - not if the repo was renamed or moved.
+#
+# config:
+#   monorepo-pulumi-cloud:repository: owner/repo   # default: parsed from git remote origin
+#   monorepo-pulumi-cloud:branch: main             # branch the stacks deploy from
+#   monorepo-pulumi-cloud:infraDir: infra          # where the layered programs live
+#   monorepo-pulumi-cloud:projectPrefix: monorepo  # monorepo-networking, monorepo-cluster, ...

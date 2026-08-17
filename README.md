@@ -14,6 +14,9 @@ infra/
 ├── networking/           layer 1 — VPC, subnets, AZs. No upstream.
 ├── cluster/              layer 2 — reads networking's outputs, exports a secret kubeconfig
 └── workload/             layer 3 — reads cluster's outputs, reaches networking transitively
+
+pulumi-cloud/             layer 0 — the pipeline itself, as a Pulumi program
+.github/workflows/        the prod promotion, the one piece Deployments can't express
 ```
 
 | Layer | Pulumi project | Consumes | Exports |
@@ -30,18 +33,19 @@ none that require cloud spend or credentials.
 ## Quick start
 
 ```bash
-cd infra/networking && pulumi install    # detects the workspace root, installs once for all three
+cd infra
+pulumi install -C networking    # detects the workspace root, installs once for all three
+
+export PULUMI_ORG=<your-org>
+for env in dev prod; do
+  for layer in networking cluster workload; do
+    (cd $layer && pulumi stack init "$PULUMI_ORG/$env" && pulumi up -s "$env" --yes)
+  done
+done
 ```
 
-Then deploy bottom-up:
-
-```bash
-(cd networking && pulumi up -s dev --yes)
-(cd cluster    && pulumi up -s dev --yes)
-(cd workload   && pulumi up -s dev --yes)
-```
-
-Same for `prod`. Tear down in reverse.
+`pulumi up` will not create a missing stack, hence the `stack init`. Tear down in reverse
+— `workload`, `cluster`, `networking`.
 
 The order is mandatory, not advisory: a `StackReference` is read during **preview**, so a
 downstream stack cannot even be previewed until its upstream has been deployed.
@@ -80,3 +84,61 @@ The kubeconfig is built from a real self-signed CA and stays secret across the r
 (cd cluster  && pulumi stack output -s dev kubeconfig)                        # [secret]
 (cd workload && pulumi stack output -s dev --show-secrets kubeconfigContext)  # funny-mosquito
 ```
+
+## CI/CD
+
+Every update runs in Pulumi Deployments. There are three triggers:
+
+| Trigger | Runs | How it stays ordered |
+| --- | --- | --- |
+| PR opened or pushed | `pulumi preview` on the layer whose path changed, `dev` **and** `prod` | n/a — previews are independent |
+| merge to `main` | `pulumi up` on the three `dev` stacks | `update_succeeded` webhooks chain each layer to the next |
+| `prod` tag moved | `pulumi up` on the three `prod` stacks, at the tagged commit | a loop in `.github/workflows/deploy-prod.yml` |
+
+A merge never touches `prod`. Promotion is moving the tag:
+
+```bash
+git tag -f prod <sha> && git push -f origin prod
+```
+
+`pulumi-cloud/` declares all of it with `@pulumi/pulumiservice` — six
+`DeploymentSettings` and two `Webhook`s. `Pulumi.main.yaml` lists the config overrides;
+you shouldn't need any.
+
+### Running it on your own fork
+
+Order matters: `DeploymentSettings` 404s against a stack that doesn't exist, so the six
+stacks come first.
+
+1. Fork this repo, or use it as a template, and clone it. Nothing needs editing — the org
+   comes from `getOrganization()`, and `owner/repo` is read off `git remote origin`.
+2. Give the [Pulumi GitHub App](https://www.pulumi.com/docs/integrations/version-control/github-app/)
+   access to the new repo. Deployments can only see repos you grant it.
+3. Run the Quick start above. All six stacks have to exist *and* be deployed.
+4. Bootstrap the pipeline, in the org holding those stacks:
+
+   ```bash
+   cd pulumi-cloud    # from the repo root; the Quick start leaves you in infra/
+   npm install
+   pulumi stack init "$PULUMI_ORG/main"
+   pulumi up
+   ```
+
+5. Give the tag workflow its credentials:
+
+   ```bash
+   gh secret set PULUMI_ACCESS_TOKEN                # paste a Pulumi access token
+   gh variable set PULUMI_ORG --body "$PULUMI_ORG"
+   ```
+
+6. Cut the first release: `git tag prod main && git push origin prod`.
+
+Three things that aren't obvious:
+
+- `prod` uses Actions rather than the webhook chain because tag triggers aren't exposed on
+  `DeploymentSettings`, and a webhook fires the target stack at *its* branch — so layers 2
+  and 3 would deploy from `main`, not the tag. `--git-commit` pins all three.
+- A downstream preview resolves its `StackReference` against the **deployed** upstream, not
+  the PR's version of it.
+- The webhooks fire on any successful update of the upstream stack, including a local
+  `pulumi up`.
