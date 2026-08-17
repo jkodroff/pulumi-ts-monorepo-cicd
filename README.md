@@ -14,6 +14,9 @@ infra/
 ├── networking/           layer 1 — VPC, subnets, AZs. No upstream.
 ├── cluster/              layer 2 — reads networking's outputs, exports a secret kubeconfig
 └── workload/             layer 3 — reads cluster's outputs, reaches networking transitively
+
+pulumi-cloud/             layer 0 — the pipeline itself, as a Pulumi program
+.github/workflows/        the prod promotion, the one piece Deployments can't express
 ```
 
 | Layer | Pulumi project | Consumes | Exports |
@@ -80,3 +83,42 @@ The kubeconfig is built from a real self-signed CA and stays secret across the r
 (cd cluster  && pulumi stack output -s dev kubeconfig)                        # [secret]
 (cd workload && pulumi stack output -s dev --show-secrets kubeconfigContext)  # funny-mosquito
 ```
+
+## CI/CD
+
+Every update runs in Pulumi Deployments. There are three triggers:
+
+| Trigger | Runs | How it stays ordered |
+| --- | --- | --- |
+| PR opened or pushed | `pulumi preview` on the layer whose path changed, `dev` **and** `prod` | n/a — previews are independent |
+| merge to `main` | `pulumi up` on the three `dev` stacks | `update_succeeded` webhooks chain each layer to the next |
+| `prod` tag moved | `pulumi up` on the three `prod` stacks, at the tagged commit | a loop in `.github/workflows/deploy-prod.yml` |
+
+A merge never touches `prod`. Promotion is moving the tag:
+
+```bash
+git tag -f prod <sha> && git push -f origin prod
+```
+
+`pulumi-cloud/` declares all of it with `@pulumi/pulumiservice` — seven
+`DeploymentSettings` (six stacks plus its own) and two `Webhook`s. Org comes from
+`getOrganization()` and `owner/repo` from `git remote origin`, so a fork needs no edits;
+`Pulumi.main.yaml` lists the overrides. Bootstrap it once, in the org holding the stacks:
+
+```bash
+(cd pulumi-cloud && npm install && pulumi stack init <org>/main && pulumi up)
+```
+
+Also needs: the Pulumi GitHub App on the repo, all six stacks deployed once bottom-up, a
+`PULUMI_ACCESS_TOKEN` secret, and a `PULUMI_ORG` variable if that token's default org
+isn't the stacks'.
+
+Three things that aren't obvious:
+
+- `prod` uses Actions rather than the webhook chain because tag triggers aren't exposed on
+  `DeploymentSettings`, and a webhook fires the target stack at *its* branch — so layers 2
+  and 3 would deploy from `main`, not the tag. `--git-commit` pins all three.
+- A downstream preview resolves its `StackReference` against the **deployed** upstream, not
+  the PR's version of it.
+- The webhooks fire on any successful update of the upstream stack, including a local
+  `pulumi up`.

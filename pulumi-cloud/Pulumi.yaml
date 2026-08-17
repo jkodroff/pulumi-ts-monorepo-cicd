@@ -1,0 +1,6 @@
+name: monorepo-pulumi-cloud
+description: Layer 0 - the CI/CD layer. Deployment settings and webhooks for every stack in this repo, including its own.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm

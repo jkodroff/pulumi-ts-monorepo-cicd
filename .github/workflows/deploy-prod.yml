@@ -1,0 +1,60 @@
+name: Deploy prod
+
+# Moving the `prod` tag is the promotion. A force-pushed tag still sends a `push` event,
+# so re-pointing `prod` at a newer commit re-runs this workflow.
+on:
+  push:
+    tags: ["prod"]
+  workflow_dispatch:
+
+# Two promotions in quick succession must not interleave. Don't cancel the in-flight one
+# either: a half-applied layered deploy is worse than a redundant one.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: networking -> cluster -> workload
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installation only - no `command`. The programs run in the Pulumi Deployments
+      # executor, not on this runner, so there is nothing here to npm install.
+      - uses: pulumi/actions@v7
+
+      - name: Deploy prod stacks in dependency order
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          # Optional. Set this repo variable when the stacks do not live in the token's
+          # own default org - a bare `--stack prod` would otherwise resolve to the wrong
+          # org on a fresh runner, which has no local default. Project names still come
+          # from each Pulumi.yaml, so nothing about the repo layout is hardcoded here.
+          PULUMI_ORG: ${{ vars.PULUMI_ORG }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PULUMI_ORG:-}" ]; then
+            pulumi org set-default "${PULUMI_ORG}"
+          fi
+          for layer in networking cluster workload; do
+            echo "::group::${layer}/prod @ ${GITHUB_SHA}"
+            (
+              cd "infra/${layer}"
+              # --git-commit pins every layer to the tagged commit. This is the reason
+              # prod is driven from here instead of by the webhook chain that orders the
+              # dev pipeline: a webhook-triggered deployment uses the target stack's own
+              # source settings, so layers 2 and 3 would deploy from the tip of `main`.
+              #
+              # --inherit-settings (the default) takes repo, repoDir and everything else
+              # from the deployment settings that pulumi-cloud/ manages, so there is one
+              # source of truth. This command blocks until the deployment finishes and
+              # exits non-zero if it fails, which is what keeps the loop ordered.
+              pulumi deployment run update \
+                --stack prod \
+                --git-commit "${GITHUB_SHA}" \
+                --inherit-settings \
+                --suppress-stream-logs=false
+            )
+            echo "::endgroup::"
+          done
