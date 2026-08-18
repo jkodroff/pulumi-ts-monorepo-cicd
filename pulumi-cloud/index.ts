@@ -85,4 +85,47 @@ for (let i = 0; i < layers.length - 1; i++) {
     });
 }
 
+// Lets .github/workflows/deploy-prod.yml exchange GitHub's OIDC token for a Pulumi one,
+// so the repo needs no PULUMI_ACCESS_TOKEN secret.
+//
+// Every github.com repo, in every GitHub org, mints its token from the same issuer URL,
+// and Pulumi allows one registration per URL per org — so the issuer is org-wide setup
+// shared with every other repo, and what distinguishes this one is the `sub` rule below.
+// Most orgs already have it registered: point `oidcIssuerId` at it. `registerOidcIssuer`
+// is for an org that has none, and defaults to false so this never fights over an issuer
+// other pipelines depend on.
+const oidcIssuerId = cfg.get("oidcIssuerId");
+const registerOidcIssuer = cfg.getBoolean("registerOidcIssuer") ?? false;
+
+const githubActionsPolicy = {
+    decision: service.AuthPolicyDecision.Allow,
+    tokenType: service.AuthPolicyTokenType.Organization,
+    authorizedPermissions: [service.AuthPolicyPermissionLevel.Admin],
+
+    // `aud` is what the workflow asks for; `sub` is what GitHub asserts about the run.
+    // Narrowing `*` to `ref:refs/tags/prod` would let only the tag workflow mint a
+    // token, at the cost of the workflow_dispatch fallback.
+    rules: {
+        aud: `urn:pulumi:org:${org}`,
+        sub: `repo:${repository}:*`,
+    },
+};
+
+if (registerOidcIssuer) {
+    new service.OidcIssuer("github-actions", {
+        organization: org,
+        name: "GitHub Actions",
+        url: "https://token.actions.githubusercontent.com",
+        maxExpirationSeconds: 60 * 60,
+        policies: [githubActionsPolicy],
+    });
+} else if (oidcIssuerId) {
+    new service.api.auth.Policy("github-actions", {
+        orgName: org,
+        issuerId: oidcIssuerId,
+        policyId: `${pulumi.getProject()}-prod-deploy`,
+        policies: [githubActionsPolicy],
+    });
+}
+
 export const configuredRepository = repository;
