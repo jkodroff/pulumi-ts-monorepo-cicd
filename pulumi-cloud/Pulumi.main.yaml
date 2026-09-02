@@ -7,3 +7,9 @@
 #   monorepo-pulumi-cloud:branch: main             # branch the stacks deploy from
 #   monorepo-pulumi-cloud:infraDir: infra          # where the layered programs live
 #   monorepo-pulumi-cloud:projectPrefix: monorepo  # monorepo-networking, monorepo-cluster, ...
+#
+# OIDC for the prod tag workflow. Set exactly one of these - see the README.
+#
+#   monorepo-pulumi-cloud:oidcIssuerId: <uuid>     # attach a policy to the org's existing
+#                                                  # GitHub issuer (the usual case)
+#   monorepo-pulumi-cloud:registerOidcIssuer: true # register it, for an org that has none
